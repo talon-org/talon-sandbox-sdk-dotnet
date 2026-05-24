@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F3CE7069-2E07-4FCE-AD4E-5FEF2965EA0A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TalonSandbox.Sdk", "src\TalonSandbox.Sdk\TalonSandbox.Sdk.csproj", "{E9F85330-44C2-4F46-8320-B6298B889FF2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{51F88810-1C91-46AF-BCF4-7222DC0CDA25}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TalonSandbox.Sdk.Tests", "tests\TalonSandbox.Sdk.Tests\TalonSandbox.Sdk.Tests.csproj", "{843C555B-D578-465E-97B1-2217E855EABE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{C1792A2B-4CF0-4F20-8463-A51D2B3C2D06}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TalonSandbox.Examples", "examples\TalonSandbox.Examples\TalonSandbox.Examples.csproj", "{DB705287-7CFA-4B6F-A5D0-1521946C3EA4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E9F85330-44C2-4F46-8320-B6298B889FF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9F85330-44C2-4F46-8320-B6298B889FF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9F85330-44C2-4F46-8320-B6298B889FF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9F85330-44C2-4F46-8320-B6298B889FF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{843C555B-D578-465E-97B1-2217E855EABE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{843C555B-D578-465E-97B1-2217E855EABE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{843C555B-D578-465E-97B1-2217E855EABE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{843C555B-D578-465E-97B1-2217E855EABE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB705287-7CFA-4B6F-A5D0-1521946C3EA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB705287-7CFA-4B6F-A5D0-1521946C3EA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB705287-7CFA-4B6F-A5D0-1521946C3EA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB705287-7CFA-4B6F-A5D0-1521946C3EA4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E9F85330-44C2-4F46-8320-B6298B889FF2} = {F3CE7069-2E07-4FCE-AD4E-5FEF2965EA0A}
+		{843C555B-D578-465E-97B1-2217E855EABE} = {51F88810-1C91-46AF-BCF4-7222DC0CDA25}
+		{DB705287-7CFA-4B6F-A5D0-1521946C3EA4} = {C1792A2B-4CF0-4F20-8463-A51D2B3C2D06}
+	EndGlobalSection
+EndGlobal
