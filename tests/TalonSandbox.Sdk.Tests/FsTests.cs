@@ -84,4 +84,55 @@ public class FsTests : WireMockFixture
         Server.LogEntries.Should().Contain(e =>
             e.RequestMessage.Method == "DELETE" && e.RequestMessage.Path.Contains("/fs/"));
     }
+
+    // ── C1 regression: per-segment URL encoding ──────────────────────────
+
+    [Fact]
+    public async Task WriteAsync_EncodesSpacesInFilename()
+    {
+        // WireMock decodes the URL path before matching, so we declare the
+        // expected route in decoded form. The fact that the request matches
+        // proves the encoded wire bytes (%20) round-trip back to the
+        // decoded path. Without our Uri.EscapeDataString call, the raw
+        // space in the request line would either be rejected by HttpClient
+        // or sent in a non-conforming form that the server wouldn't route.
+        Server.Given(Request.Create()
+                .WithPath("/v1/sandboxes/sb_abc/fs/workspace/my file.txt")
+                .UsingPut())
+              .RespondWith(Response.Create().WithStatusCode(204));
+
+        var fs = new Fs("sb_abc", Client);
+        await fs.WriteAsync("/workspace/my file.txt", Encoding.UTF8.GetBytes("ok"));
+
+        Server.LogEntries.Should().Contain(e => e.RequestMessage.Method == "PUT");
+    }
+
+    [Fact]
+    public async Task ReadAsync_EncodesChineseFilename()
+    {
+        Server.Given(Request.Create()
+                .WithPath("/v1/sandboxes/sb_abc/fs/workspace/中文.txt")
+                .UsingGet())
+              .RespondWith(Response.Create().WithStatusCode(200).WithBody("ok"));
+
+        var fs = new Fs("sb_abc", Client);
+        var data = await fs.ReadAsync("/workspace/中文.txt");
+        Encoding.UTF8.GetString(data).Should().Be("ok");
+    }
+
+    [Fact]
+    public async Task ListAsync_PreservesPathSeparators()
+    {
+        // Slashes between segments are NOT encoded — only intra-segment.
+        Server.Given(Request.Create()
+                .WithPath("/v1/sandboxes/sb_abc/fs-list/a/b c/d")
+                .UsingGet())
+              .RespondWith(Response.Create().WithStatusCode(200)
+                  .WithBody("""{"entries":[]}""")
+                  .WithHeader("Content-Type", "application/json"));
+
+        var fs = new Fs("sb_abc", Client);
+        var entries = await fs.ListAsync("/a/b c/d");
+        entries.Should().BeEmpty();
+    }
 }

@@ -47,18 +47,36 @@ public class ExposeTests : WireMockFixture
     }
 
     [Fact]
-    public async Task ExposeAsync_404_ThrowsNotImplementedException()
+    public async Task ExposeAsync_404PageNotFound_ThrowsNotImplementedException()
     {
+        // chi's default "404 page not found" body (no JSON, no "sandbox"
+        // keyword) → endpoint genuinely missing on this server.
         SetupGetSandbox();
         Server.Given(Request.Create().WithPath("/v1/sandboxes/sb_abc/expose").UsingPost())
               .RespondWith(Response.Create().WithStatusCode(404)
-                  .WithBody("""{"error":"not found"}""")
-                  .WithHeader("Content-Type", "application/json"));
+                  .WithBody("404 page not found"));
 
         var sb = await Sandbox.GetAsync("sb_abc", Client);
         var act = async () => await sb.ExposeAsync(5173);
         await act.Should().ThrowAsync<NotImplementedException>()
             .WithMessage("*Upgrade*");
+    }
+
+    [Fact]
+    public async Task ExposeAsync_404SandboxNotFound_ThrowsNotFoundException()
+    {
+        // Server says the sandbox itself is gone — that's a real user error,
+        // not a missing endpoint. NotFoundException must propagate so the
+        // caller can distinguish "delete stale id" from "upgrade server".
+        SetupGetSandbox();
+        Server.Given(Request.Create().WithPath("/v1/sandboxes/sb_abc/expose").UsingPost())
+              .RespondWith(Response.Create().WithStatusCode(404)
+                  .WithBody("""{"error":"sandbox not found"}""")
+                  .WithHeader("Content-Type", "application/json"));
+
+        var sb = await Sandbox.GetAsync("sb_abc", Client);
+        var act = async () => await sb.ExposeAsync(5173);
+        await act.Should().ThrowAsync<Exceptions.NotFoundException>();
     }
 
     [Fact]

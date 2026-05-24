@@ -160,9 +160,15 @@ public sealed class SandboxClient : IDisposable, IAsyncDisposable
             .ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
         {
+            // Capture status + body BEFORE Dispose. Reading StatusCode after
+            // Dispose works today by accident (value-type prop on the message)
+            // but any future proxy handler that touches the disposed Content
+            // internally throws ObjectDisposedException, masking the real
+            // server error from the user.
+            var status = (int)resp.StatusCode;
             var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             resp.Dispose();
-            HttpHelper.ThrowIfError((int)resp.StatusCode, body);
+            HttpHelper.ThrowIfError(status, body);
         }
         return resp;
     }

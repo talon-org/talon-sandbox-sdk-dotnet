@@ -142,6 +142,10 @@ internal sealed class ProcessInfo
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
+
+    /// <summary>Process exit code. -1 while still running.</summary>
+    [JsonPropertyName("exit_code")]
+    public int ExitCode { get; set; } = -1;
 }
 
 internal sealed class ProcessListResponse

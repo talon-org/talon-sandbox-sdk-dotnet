@@ -19,8 +19,7 @@ public sealed class Fs
     /// <summary>Reads raw bytes from a file inside the sandbox.</summary>
     public async Task<byte[]> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
-        var req = new HttpRequestMessage(HttpMethod.Get,
-            $"/v1/sandboxes/{_sandboxId}/fs/{path.TrimStart('/')}");
+        var req = new HttpRequestMessage(HttpMethod.Get, BuildFsPath(path));
         using var resp = await _client.SendRawAsync(req, cancellationToken).ConfigureAwait(false);
         return await resp.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -35,8 +34,7 @@ public sealed class Fs
     /// <summary>Writes raw bytes to a file (creates intermediate directories automatically).</summary>
     public async Task WriteAsync(string path, byte[] data, CancellationToken cancellationToken = default)
     {
-        var req = new HttpRequestMessage(HttpMethod.Put,
-            $"/v1/sandboxes/{_sandboxId}/fs/{path.TrimStart('/')}")
+        var req = new HttpRequestMessage(HttpMethod.Put, BuildFsPath(path))
         {
             Content = new ByteArrayContent(data),
         };
@@ -54,7 +52,7 @@ public sealed class Fs
         CancellationToken cancellationToken = default)
     {
         var req = new HttpRequestMessage(HttpMethod.Get,
-            $"/v1/sandboxes/{_sandboxId}/fs-list/{path.TrimStart('/')}?offset={offset}&limit={limit}");
+            $"{BuildListPath(path)}?offset={offset}&limit={limit}");
         var result = await _client.SendAsync(req, TalonJsonContext.Default.FsListResponse, cancellationToken)
             .ConfigureAwait(false);
         return result.Entries;
@@ -63,8 +61,30 @@ public sealed class Fs
     /// <summary>Removes a file or directory.</summary>
     public async Task RemoveAsync(string path, CancellationToken cancellationToken = default)
     {
-        var req = new HttpRequestMessage(HttpMethod.Delete,
-            $"/v1/sandboxes/{_sandboxId}/fs/{path.TrimStart('/')}");
+        var req = new HttpRequestMessage(HttpMethod.Delete, BuildFsPath(path));
         await _client.SendNoContentAsync(req, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Build a fs path with each segment URL-encoded so filenames with
+    /// spaces, Chinese characters, or shell-special chars don't break the
+    /// HTTP request line or get sent verbatim as path-traversal attempts.
+    /// </summary>
+    private string BuildFsPath(string path)
+        => $"/v1/sandboxes/{_sandboxId}/fs/{EncodePathSegments(path)}";
+
+    private string BuildListPath(string path)
+        => $"/v1/sandboxes/{_sandboxId}/fs-list/{EncodePathSegments(path)}";
+
+    private static string EncodePathSegments(string path)
+    {
+        var trimmed = path.TrimStart('/');
+        if (trimmed.Length == 0) return string.Empty;
+        var parts = trimmed.Split('/');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            parts[i] = Uri.EscapeDataString(parts[i]);
+        }
+        return string.Join('/', parts);
     }
 }

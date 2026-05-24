@@ -255,11 +255,30 @@ public sealed class Sandbox : IAsyncDisposable
                 .ConfigureAwait(false);
             return result.Url;
         }
-        catch (NotFoundException)
+        catch (NotFoundException ex) when (IsEndpointMissing(ex))
         {
+            // Server doesn't have /expose endpoint yet (pre-v1.1). Surface
+            // as NotImplementedException so callers can degrade gracefully.
+            // A 404 that names "sandbox" in the body falls through as a real
+            // NotFoundException — that's a user-supplied bad sandbox id.
             throw new NotImplementedException(
                 "ExposeAsync requires server v1.1+ (Spec 50). Upgrade your Talon Sandbox server.");
         }
+    }
+
+    /// <summary>
+    /// Heuristic: a 404 whose body doesn't mention "sandbox" / "port" is
+    /// almost certainly chi's default "404 page not found" for a missing
+    /// route. When the body identifies the resource, the sandbox or port
+    /// genuinely doesn't exist and we let the original NotFoundException
+    /// propagate.
+    /// </summary>
+    private static bool IsEndpointMissing(NotFoundException ex)
+    {
+        var msg = ex.Message ?? string.Empty;
+        if (msg.Contains("sandbox", StringComparison.OrdinalIgnoreCase)) return false;
+        if (msg.Contains("port", StringComparison.OrdinalIgnoreCase)) return false;
+        return true;
     }
 
     /// <summary>Removes a port exposure.</summary>
