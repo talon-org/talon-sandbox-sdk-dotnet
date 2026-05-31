@@ -318,6 +318,8 @@ public sealed class Sandbox : IAsyncDisposable
         {
             ImageId = opts.Image,
             NetworkPolicy = NormalizeNetwork(opts.Network),
+            // 非空时覆盖 worker 全局白名单；null 则不发送字段，后端回退全局配置
+            NetworkAllowedHosts = opts.NetworkAllowedHosts is { Count: > 0 } h ? h : null,
             Env = opts.Env,
             Labels = opts.Labels,
         };

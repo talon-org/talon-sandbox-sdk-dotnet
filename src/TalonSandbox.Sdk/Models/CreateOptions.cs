@@ -14,6 +14,13 @@ public sealed class CreateOptions
     /// <summary>Network policy: "allowlist" | "open" | "sealed".</summary>
     public string? Network { get; set; }
 
+    /// <summary>
+    /// allowlist/restricted-egress 策略下放行的出站 host 列表（域名/IP/CIDR）。
+    /// 非空时覆盖 worker 全局白名单；null 或空列表则回退全局配置。
+    /// 仅 allowlist 策略有意义，其他策略忽略此字段。
+    /// </summary>
+    public IReadOnlyList<string>? NetworkAllowedHosts { get; set; }
+
     /// <summary>Startup environment variables.</summary>
     public Dictionary<string, string>? Env { get; set; }
 
@@ -82,6 +89,11 @@ internal sealed class CreateSandboxRequest
     [JsonPropertyName("network_policy")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? NetworkPolicy { get; set; }
+
+    // allowlist/restricted-egress 策略下放行的 host 列表；null 时不发送该字段
+    [JsonPropertyName("network_allowed_hosts")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? NetworkAllowedHosts { get; set; }
 
     [JsonPropertyName("env")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
