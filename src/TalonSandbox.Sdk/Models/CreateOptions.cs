@@ -117,6 +117,7 @@ internal sealed class RunRequest
     [JsonPropertyName("command")]
     public IReadOnlyList<string> Command { get; set; } = [];
 
+    /// <summary>进程启动环境变量，格式 "KEY=value"，null 时不发送该字段。</summary>
     [JsonPropertyName("env")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<string>? Env { get; set; }
@@ -124,6 +125,11 @@ internal sealed class RunRequest
     [JsonPropertyName("cwd")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Cwd { get; set; }
+
+    /// <summary>进程声明对外暴露的端口列表，用于预览反代准入与 DNAT；null 时不发送该字段。</summary>
+    [JsonPropertyName("expose_ports")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<int>? ExposePorts { get; set; }
 }
 
 internal sealed class ExecResult

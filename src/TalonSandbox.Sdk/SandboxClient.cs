@@ -184,6 +184,22 @@ public sealed class SandboxClient : IDisposable, IAsyncDisposable
         };
     }
 
+    // ── Images ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 查询平台可用的 baseimage 列表（GET /v1/images）。
+    /// 任何已认证成员均可调用，结果可用于创建 sandbox 时填写 Image 选项。
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    public async Task<IReadOnlyList<Models.ImageInfo>> ListImagesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Get, "/v1/images");
+        var result = await SendAsync(req, Internal.TalonJsonContext.Default.ImageListResponse, cancellationToken)
+            .ConfigureAwait(false);
+        return result.Images;
+    }
+
     // ── Dispose ───────────────────────────────────────────────────────────
 
     /// <inheritdoc/>

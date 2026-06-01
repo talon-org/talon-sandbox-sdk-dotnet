@@ -156,6 +156,28 @@ public sealed class Sandbox : IAsyncDisposable
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// 将 stopped 状态的 sandbox 重新启动，切换到 running 状态。
+    /// 与 <see cref="ResumeAsync"/> 不同——start 是从 stopped 切 running，
+    /// resume 是从 paused（SIGSTOP）切 running。幂等，返回 204。
+    /// </summary>
+    public async Task StartSandboxAsync(CancellationToken cancellationToken = default)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, $"/v1/sandboxes/{Id}/start");
+        await _client.SendNoContentAsync(req, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 将 running 状态的 sandbox 停止（running→stopped）。
+    /// 进程被终止但 sandbox 元数据保留，可通过 <see cref="StartSandboxAsync"/> 重启。
+    /// 与 <see cref="PauseAsync"/>（SIGSTOP 冻结）语义不同。幂等，返回 204。
+    /// </summary>
+    public async Task StopSandboxAsync(CancellationToken cancellationToken = default)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, $"/v1/sandboxes/{Id}/stop");
+        await _client.SendNoContentAsync(req, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Freezes all processes inside the sandbox (SIGSTOP). Idempotent.</summary>
     public async Task PauseAsync(CancellationToken cancellationToken = default)
     {
@@ -185,16 +207,19 @@ public sealed class Sandbox : IAsyncDisposable
     /// </summary>
     /// <param name="command">Shell command string (wrapped in /bin/sh -c).</param>
     /// <param name="cwd">Working directory inside the sandbox.</param>
+    /// <param name="env">额外注入的环境变量，格式 "KEY=value"。null 时不发送该字段。</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<ProcessResult> RunAsync(
         string command,
         string? cwd = null,
+        IEnumerable<string>? env = null,
         CancellationToken cancellationToken = default)
     {
         var body = new RunRequest
         {
             Command = ["/bin/sh", "-c", command],
             Cwd = cwd,
+            Env = env?.ToList(),
         };
         var req = _client.JsonRequest(HttpMethod.Post, $"/v1/sandboxes/{Id}/exec",
             body, TalonJsonContext.Default.RunRequest);
@@ -209,13 +234,23 @@ public sealed class Sandbox : IAsyncDisposable
     /// </summary>
     /// <param name="command">Shell command string (wrapped in /bin/sh -c).</param>
     /// <param name="cwd">Working directory inside the sandbox.</param>
+    /// <param name="env">额外注入的环境变量，格式 "KEY=value"。null 时不发送该字段。</param>
+    /// <param name="exposePorts">进程声明对外暴露的端口列表，用于预览反代准入与 DNAT。null 时不发送该字段。</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<SandboxProcess> SpawnAsync(
         string command,
         string? cwd = null,
+        IEnumerable<string>? env = null,
+        IEnumerable<int>? exposePorts = null,
         CancellationToken cancellationToken = default)
     {
-        var body = new RunRequest { Command = ["/bin/sh", "-c", command], Cwd = cwd };
+        var body = new RunRequest
+        {
+            Command = ["/bin/sh", "-c", command],
+            Cwd = cwd,
+            Env = env?.ToList(),
+            ExposePorts = exposePorts?.ToList(),
+        };
         var req = _client.JsonRequest(HttpMethod.Post, $"/v1/sandboxes/{Id}/processes",
             body, TalonJsonContext.Default.RunRequest);
         var info = await _client.SendAsync(req, TalonJsonContext.Default.ProcessInfo, cancellationToken)
@@ -223,6 +258,32 @@ public sealed class Sandbox : IAsyncDisposable
         var proc = new SandboxProcess(Id, info, _client);
         proc.StartPolling();
         return proc;
+    }
+
+    // ── Agent ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 在 sandbox 内同步执行高层 agent 任务（Spec 38）。
+    /// 调用 POST /v1/sandboxes/{id}/agent/run，阻塞直到任务完成，最长 5 分钟。
+    /// </summary>
+    /// <param name="goal">自然语言任务描述，如 "打开 https://example.com 并截图"。</param>
+    /// <param name="options">可选参数：max_steps / llm_model。</param>
+    /// <param name="cancellationToken">取消令牌（建议设 5 分钟以上超时）。</param>
+    public async Task<AgentRunResult> AgentRunAsync(
+        string goal,
+        AgentRunOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var body = new AgentRunRequest
+        {
+            Goal = goal,
+            MaxSteps = options?.MaxSteps ?? 0,
+            LlmModel = options?.LlmModel,
+        };
+        var req = _client.JsonRequest(HttpMethod.Post, $"/v1/sandboxes/{Id}/agent/run",
+            body, TalonJsonContext.Default.AgentRunRequest);
+        return await _client.SendAsync(req, TalonJsonContext.Default.AgentRunResult, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     // ── Port exposure ─────────────────────────────────────────────────────
