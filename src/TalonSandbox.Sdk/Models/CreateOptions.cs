@@ -186,9 +186,6 @@ internal sealed class EnvAllResponse
 
 internal sealed class EnvSetRequest
 {
-    [JsonPropertyName("key")]
-    public string Key { get; set; } = string.Empty;
-
     [JsonPropertyName("value")]
     public string Value { get; set; } = string.Empty;
 }

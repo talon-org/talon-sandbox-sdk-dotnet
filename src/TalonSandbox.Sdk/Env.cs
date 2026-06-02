@@ -37,13 +37,30 @@ public sealed class Env
         return result.Env;
     }
 
-    /// <summary>Sets an environment variable for subsequent processes.</summary>
+    /// <summary>
+    /// Sets a persistent environment variable for the sandbox.
+    /// Only updates the stored value; running processes are not restarted and will
+    /// not see the change until the next time they read the variable (e.g. on next
+    /// process launch).
+    /// </summary>
     public async Task SetAsync(string key, string value, CancellationToken cancellationToken = default)
     {
-        var body = new EnvSetRequest { Key = key, Value = value };
+        var body = new EnvSetRequest { Value = value };
         var req = _client.JsonRequest(HttpMethod.Put,
             $"/v1/sandboxes/{_sandboxId}/env/{Uri.EscapeDataString(key)}",
             body, TalonJsonContext.Default.EnvSetRequest);
+        await _client.SendNoContentAsync(req, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Deletes a persistent environment variable from the sandbox.
+    /// Running processes are not affected; the variable will be absent for processes
+    /// started after this call.
+    /// </summary>
+    public async Task UnsetAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Delete,
+            $"/v1/sandboxes/{_sandboxId}/env/{Uri.EscapeDataString(key)}");
         await _client.SendNoContentAsync(req, cancellationToken).ConfigureAwait(false);
     }
 }
