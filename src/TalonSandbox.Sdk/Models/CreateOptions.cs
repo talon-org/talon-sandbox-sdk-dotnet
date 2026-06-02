@@ -5,7 +5,7 @@ namespace TalonSandbox.Models;
 /// <summary>Options for <see cref="Sandbox.CreateAsync"/>.</summary>
 public sealed class CreateOptions
 {
-    /// <summary>Container image (e.g. "node:20-bookworm").</summary>
+    /// <summary>Container image (e.g. "talon-alpine").</summary>
     public string? Image { get; set; }
 
     /// <summary>Resource allocation. Strings like "4GiB" and "30m" are accepted.</summary>

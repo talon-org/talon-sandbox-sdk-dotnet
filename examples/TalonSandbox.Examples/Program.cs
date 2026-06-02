@@ -8,7 +8,7 @@ Console.WriteLine("Creating sandbox...");
 
 await using var sb = await Sandbox.CreateAsync(new()
 {
-    Image = "node:20-bookworm",
+    Image = "talon-alpine",
     Resources = new() { Cpu = 2, Memory = "4GiB", Disk = "10GiB" },
     Network = "allowlist",
     Env = new() { ["NODE_ENV"] = "development" },

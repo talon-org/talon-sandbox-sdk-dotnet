@@ -12,7 +12,7 @@ public sealed class ImageInfo
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
-    /// <summary>友好名称，如 "node:20-bookworm"。</summary>
+    /// <summary>友好名称，如 "talon-alpine"。</summary>
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
