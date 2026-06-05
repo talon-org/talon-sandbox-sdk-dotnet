@@ -31,6 +31,8 @@ public sealed class Terminal
         wsUrl += $"/v1/sandboxes/{_sandboxId}/pty";
 
         var ws = new ClientWebSocket();
+        // 规范 User-Agent，与 HTTP 出口口径一致，供后端做来源追踪。
+        ws.Options.SetRequestHeader("User-Agent", Internal.UserAgent.Value);
         if (_authHeader is not null)
             ws.Options.SetRequestHeader("Authorization", _authHeader);
 

@@ -46,6 +46,8 @@ public static class TalonSandboxServiceCollectionExtensions
         {
             client.BaseAddress = new Uri(opts.Server.TrimEnd('/') + "/");
             client.Timeout = opts.Timeout;
+            // 规范 User-Agent，供后端按 UA 前缀做来源追踪（created_from = sdk-dotnet）。
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(Internal.UserAgent.Value);
         });
 
         services.AddTransient<SandboxClient>();
@@ -99,6 +101,8 @@ public sealed class SandboxClient : IDisposable, IAsyncDisposable
             BaseAddress = new Uri(_baseUrl + "/"),
             Timeout = timeout ?? TimeSpan.FromSeconds(30),
         };
+        // 规范 User-Agent，供后端按 UA 前缀做来源追踪（created_from = sdk-dotnet）。
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd(Internal.UserAgent.Value);
         _ownsHttpClient = true;
     }
 
