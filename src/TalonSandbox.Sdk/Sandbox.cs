@@ -124,7 +124,17 @@ public sealed class Sandbox : IAsyncDisposable
         }
     }
 
-    /// <summary>Lists sandboxes, optionally filtered by labels (client-side).</summary>
+    /// <summary>
+    /// 列出当前租户下的所有 sandbox，可按 labels 过滤。
+    ///
+    /// <para>
+    /// 当 <see cref="ListOptions.Labels"/> 非空时：
+    /// <list type="bullet">
+    ///   <item>把每个 (key, value) 拼成 <c>label=key:value</c> query 参数发给服务端（AND 语义）；</item>
+    ///   <item>同时在客户端对返回结果再次过滤，兼容老服务端未实现该参数的场景。</item>
+    /// </list>
+    /// </para>
+    /// </summary>
     public static async Task<IReadOnlyList<SandboxInfo>> ListAsync(
         ListOptions? options = null,
         SandboxClient? client = null,
@@ -134,11 +144,16 @@ public sealed class Sandbox : IAsyncDisposable
         client ??= new SandboxClient();
         try
         {
-            var req = new HttpRequestMessage(HttpMethod.Get, "/v1/sandboxes");
+            // 拼服务端 label 过滤参数：每个 (key, value) 生成一个 label=key:value query 参数。
+            // value 可能含等号，故用冒号分隔而非等号；重复同名参数表示 AND 语义。
+            var url = BuildListUrl(options?.Labels);
+            var req = new HttpRequestMessage(HttpMethod.Get, url);
             var result = await client.SendAsync(req, TalonJsonContext.Default.SandboxListResponse, cancellationToken)
                 .ConfigureAwait(false);
 
             var sandboxes = result.Sandboxes;
+
+            // 客户端兜底过滤：老服务端若忽略 label 参数则在此补齐；新服务端已过滤时此处无额外开销。
             if (options?.Labels is { Count: > 0 } labels)
             {
                 sandboxes = sandboxes
@@ -152,6 +167,32 @@ public sealed class Sandbox : IAsyncDisposable
         {
             if (ownedClient) client.Dispose();
         }
+    }
+
+    /// <summary>
+    /// 构造 list 请求 URL，当 labels 非空时追加多个 <c>label=key:value</c> 参数。
+    /// key 和 value 均经 <see cref="Uri.EscapeDataString"/> 编码以保证安全；
+    /// 两者之间用冒号 <c>:</c> 分隔（value 可含等号，冒号不歧义）。
+    /// </summary>
+    private static string BuildListUrl(Dictionary<string, string>? labels)
+    {
+        // 无 label 过滤时直接返回基础路径，不附加任何 query string。
+        if (labels is not { Count: > 0 })
+            return "/v1/sandboxes";
+
+        var sb = new StringBuilder("/v1/sandboxes?");
+        var first = true;
+        foreach (var kv in labels)
+        {
+            if (!first) sb.Append('&');
+            // 格式：label=<encoded-key>:<encoded-value>
+            sb.Append("label=");
+            sb.Append(Uri.EscapeDataString(kv.Key));
+            sb.Append(':');
+            sb.Append(Uri.EscapeDataString(kv.Value));
+            first = false;
+        }
+        return sb.ToString();
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────

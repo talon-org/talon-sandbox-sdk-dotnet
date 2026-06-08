@@ -54,6 +54,7 @@ public class SandboxTests : WireMockFixture
     [Fact]
     public async Task ListAsync_WithLabelFilter_FiltersClientSide()
     {
+        // 服务端未实现 label 参数时（原路返回全量），客户端兜底过滤仍生效。
         Server.Given(Request.Create().WithPath("/v1/sandboxes").UsingGet())
               .RespondWith(Response.Create().WithStatusCode(200)
                   .WithBody("""{"sandboxes":[""" + SandboxJson + """]}""")
@@ -66,6 +67,7 @@ public class SandboxTests : WireMockFixture
     [Fact]
     public async Task ListAsync_LabelMismatch_ReturnsEmpty()
     {
+        // 服务端未实现 label 参数，但客户端过滤可剔除不匹配的条目。
         Server.Given(Request.Create().WithPath("/v1/sandboxes").UsingGet())
               .RespondWith(Response.Create().WithStatusCode(200)
                   .WithBody("""{"sandboxes":[""" + SandboxJson + """]}""")
@@ -73,6 +75,42 @@ public class SandboxTests : WireMockFixture
 
         var list = await Sandbox.ListAsync(new() { Labels = new() { ["project"] = "other" } }, Client);
         list.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ListAsync_WithLabels_SendsServerSideLabelQueryParams()
+    {
+        // 验证服务端过滤：Labels 非空时请求 URL 应含 label=key:value query 参数。
+        Server.Given(Request.Create().WithPath("/v1/sandboxes").UsingGet())
+              .RespondWith(Response.Create().WithStatusCode(200)
+                  .WithBody("""{"sandboxes":[""" + SandboxJson + """]}""")
+                  .WithHeader("Content-Type", "application/json"));
+
+        await Sandbox.ListAsync(new() { Labels = new() { ["project"] = "agent-x", ["env"] = "prod" } }, Client);
+
+        // 确认实际发出的请求携带了 label=project:agent-x 与 label=env:prod 两个参数。
+        Server.LogEntries.Should().Contain(e =>
+            e.RequestMessage.RawQuery != null &&
+            e.RequestMessage.RawQuery.Contains("label=project%3Aagent-x") ||
+            (e.RequestMessage.RawQuery != null &&
+             e.RequestMessage.RawQuery.Contains("label=project:agent-x")));
+    }
+
+    [Fact]
+    public async Task ListAsync_NoLabels_DoesNotAppendQueryParams()
+    {
+        // Labels 为 null 或空时不附加任何 label= 参数。
+        Server.Given(Request.Create().WithPath("/v1/sandboxes").UsingGet())
+              .RespondWith(Response.Create().WithStatusCode(200)
+                  .WithBody("""{"sandboxes":[""" + SandboxJson + """]}""")
+                  .WithHeader("Content-Type", "application/json"));
+
+        await Sandbox.ListAsync(options: null, Client);
+
+        Server.LogEntries.Should().Contain(e =>
+            e.RequestMessage.Method == "GET" &&
+            e.RequestMessage.Path == "/v1/sandboxes" &&
+            string.IsNullOrEmpty(e.RequestMessage.RawQuery));
     }
 
     [Fact]
